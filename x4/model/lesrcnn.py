@@ -79,7 +79,7 @@ class Net(nn.Module):
         '''
         self.ReLU=nn.ReLU(inplace=True)
         self.upsample = ops.UpsampleBlock(64, scale=scale, multi_scale=multi_scale,group=1)
-    def forward(self, x, scale):
+    def forward(self, x, scale=4):
         #print '-------dfd'
         x = self.sub_mean(x)
         c0 = x

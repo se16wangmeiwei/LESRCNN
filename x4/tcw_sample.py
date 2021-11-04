@@ -22,7 +22,7 @@ from torchsummary import summary #tcw20190623
 os.environ['CUDA_VISIBLE_DEVICES']='0'
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str)
+    parser.add_argument("--model",default='lesrcnn ', type=str)
     parser.add_argument("--ckpt_path", type=str)
     parser.add_argument("--group", type=int, default=1)
     parser.add_argument("--sample_dir", type=str)
@@ -288,7 +288,7 @@ def main(cfg):
 	print(''+ str(k))
     '''
     print(json.dumps(vars(cfg), indent=4, sort_keys=True))  # print cfg information according order.
-    state_dict = torch.load(cfg.ckpt_path, map_location='cpu')
+    state_dict = torch.load('lesrcnn_x4.pth', map_location='cpu')
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
         name = k
@@ -321,7 +321,7 @@ def main(cfg):
         # print(out.shape)
 
         out = out.squeeze(0)
-        save_path = osp.join(cfg.sample_dir, "{}_x{}.png".format(name, cfg.scale))
+        save_path = osp.join(cfg.save_dir, "{}_x{}.png".format(name, cfg.scale))
         # print('save',save_path)
         img_t = img_t.squeeze(0)
         out = out.squeeze(0)
