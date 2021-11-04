@@ -12,6 +12,11 @@ from torch.autograd import Variable
 from dataset import TestDataset
 from PIL import Image
 import cv2 #201904111751tcwi
+import os.path as osp
+from glob import glob
+#新加的包
+from tqdm import tqdm
+
 from torchsummary import summary #tcw20190623
 #from torchsummaryX import summary #tcw20190625
 os.environ['CUDA_VISIBLE_DEVICES']='0'
@@ -241,13 +246,33 @@ def sample(net, device, dataset, cfg):
     print (mean_psnr2,  mean_ssim)
         #print '-------------------'z
 
+
+def image_compose(lr, hr):
+    print(lr.shape, hr.shape)
+    to_image = Image.new('RGB', (2 * 1000, 1 * 1000))
+    lr = tensor2img(lr)
+    hr = tensor2img(hr)
+    lr = lr.resize((1000, 1000), Image.ANTIALIAS)
+    hr = hr.resize((1000, 1000), Image.ANTIALIAS)
+    to_image.paste(lr, (0, 0))
+    to_image.paste(hr, (1000, 0))
+    return to_image
+
+
+def tensor2img(tensor):
+    tensor = tensor.cpu()
+    ndarr = tensor.mul(255).clamp(0, 255).byte().permute(1, 2, 0).numpy()
+    im = Image.fromarray(ndarr)
+    return im
+
+
 def main(cfg):
     module = importlib.import_module("model.{}".format(cfg.model))
     ''' 
     net = module.Net(multi_scale=False, 
                      group=cfg.group)
     '''
-    net = module.Net(scale=cfg.scale, 
+    net = module.Net(scale=cfg.scale,
                      group=cfg.group)
     '''
     #net = MyModel
@@ -262,8 +287,8 @@ def main(cfg):
 	    k = k + l
 	print(''+ str(k))
     '''
-    print(json.dumps(vars(cfg), indent=4, sort_keys=True)) #print cfg information according order.
-    state_dict = torch.load(cfg.ckpt_path)
+    print(json.dumps(vars(cfg), indent=4, sort_keys=True))  # print cfg information according order.
+    state_dict = torch.load(cfg.ckpt_path, map_location='cpu')
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
         name = k
@@ -271,13 +296,39 @@ def main(cfg):
         new_state_dict[name] = v
 
     net.load_state_dict(new_state_dict)
-    #os.environ['CUDA_VISIBLE_DEVICES']='0,1'
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #0 is number of gpu, if this gpu1 is work, you can set it into 1 (device=torch.device("cuda:1" if torch.cuda.is_available() else "cpu"))
+    # os.environ['CUDA_VISIBLE_DEVICES']='0,1'
+    device = torch.device(
+        "cuda:0" if torch.cuda.is_available() else "cpu")  # 0 is number of gpu, if this gpu1 is work, you can set it into 1 (device=torch.device("cuda:1" if torch.cuda.is_available() else "cpu"))
+    print(device)
     net = net.to(device)
-    #summary(net,[(3,240, 160),(3,1000, 2000)]) #tcw20190623
-    #summary(net,[torch.zeros(1,3,240,160),2],2)
-    dataset = TestDataset(cfg.test_data_dir, cfg.scale)
-    sample(net, device, dataset, cfg)
+    # summary(net,[(3,240, 160),(3,1000, 2000)]) #tcw20190623
+    # summary(net,[torch.zeros(1,3,240,160),2],2)
+    # dataset = TestDataset(cfg.test_data_dir, cfg.scale)
+    # sample(net, device, dataset, cfg)
+    # print(cfg.test_data_dir)
+    test_files = glob(osp.join(cfg.test_data_dir, "*png"))
+    # print(test_files)
+    for inx, path in tqdm(enumerate(test_files)):
+        # print(1)
+        name = path.split("/")[-1].split(".")[0]
+
+        img = cv2.imread(path)[:, :, [2, 1, 0]]
+        img = img.transpose(2, 0, 1)[None] / 255
+        img_t = torch.as_tensor(np.ascontiguousarray(img)).float()
+        img_t.to(device)
+
+        out = net(img_t, cfg.scale)
+        # print(out.shape)
+
+        out = out.squeeze(0)
+        save_path = osp.join(cfg.sample_dir, "{}_x{}.png".format(name, cfg.scale))
+        # print('save',save_path)
+        img_t = img_t.squeeze(0)
+        out = out.squeeze(0)
+        image = image_compose(img_t, out)
+        image.save(save_path)
+        # save_image(image, save_path)
+        # summary(net,x=img_t)
  
 
 if __name__ == "__main__":
