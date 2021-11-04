@@ -22,10 +22,10 @@ from torchsummary import summary #tcw20190623
 os.environ['CUDA_VISIBLE_DEVICES']='0'
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model",default='lesrcnn ', type=str)
+    parser.add_argument("--model",default='lesrcnn', type=str)
     parser.add_argument("--ckpt_path", type=str)
     parser.add_argument("--group", type=int, default=1)
-    parser.add_argument("--sample_dir", type=str)
+    parser.add_argument("--save_dir", type=str)
     parser.add_argument("--test_data_dir", type=str, default="dataset/Urban100")
     parser.add_argument("--cuda", action="store_true")
     parser.add_argument("--scale", type=int, default=4)
